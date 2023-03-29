@@ -8,7 +8,7 @@
 
 - 오픈스택의 기본 구조 및 개념
 
-- [네트워크 기초]()
+- [네트워크 기초](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_2/article_network.md)
 
 [Week 3 - 컨테이너 개요](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_3/article.md#컨테이너-장점)
 
