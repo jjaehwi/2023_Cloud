@@ -1,6 +1,6 @@
 # 2023_Cloud
 
-🖥 2023 클라우드 융합 강의 정리
+🖥 2023 클라우드 정리
 
 - [Week 1 - 가상화 개념](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_1/article.md)
 
@@ -19,3 +19,7 @@
   - 오픈스택 실습 (네트워크, 라우터 생성, nginx접속, 오픈스택 CLI 로 VM 생성)
 
   - 쿠버네티스 배경 및 탄생 과 기본 구조
+
+- [Week 5 - 쿠버네티스 설계 개념](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_5/article.md)
+
+  - workloda 배포 방법과 그 흐름에서의 4가지 Principle 이해하기
