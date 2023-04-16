@@ -30,6 +30,12 @@
 
 - **Week 7 - Kubernetes 배포 실습**
 
+  - [기초 kubectl 실습](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_7/article.md)
+
+  - [Application deployment & Scale Out](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_7/article2.md)
+
+  - [Service Deployment](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_7/article3.md)
+
 ---
 
 ## References
