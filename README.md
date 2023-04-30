@@ -36,6 +36,12 @@
 
   - [Service Deployment](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_7/article3.md)
 
+- **Week 9 - Kubernetes 의 Storage**
+
+  - K8S Volume 개요
+
+  - [Emptydir, Hostpath, PV/PVC/StorageClass 실습](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_9/article2.md)
+
 ---
 
 ## References
