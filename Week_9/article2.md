@@ -1,407 +1,182 @@
-# emptyDir, hostPath, PV/PVC/StorageClass
+# K8S Volume 개요 및 emptyDir 과 hostPath
+
+- [Volume 개요](#volume-개요)
 
 - [emptyDir](#emptydir)
 
+  - [emptyDir 의 특성](#emptydir-의-특성)
+
 - [hostPath](#hostpath)
 
-- [시나리오](#시나리오)
+---
 
-  - [PersistentVolume](#persistentvolume)
+## Volume 개요
 
-  - [StorageClass](#storageclass)
+- kubernetes 의 storage : Volume
 
-  - [PersistentVolumeClaim](#persistentvolumeclaim)
+- persistent volume 는 Volume 의 종류 중 하나
 
-  - [Pod 와 연결하여 실습](#pod-와-연결)
+- Kubernetes supports many types of volumes.
+
+- `Ephemeral volume` types (사라지는 스타일 ex. emptyDir) have a **lifetime of a pod**, but `persistent volumes` **exist beyond the lifetime of a pod**.
+
+- When a pod ceases to exist, **Kubernetes destroys ephemeral volumes**; however, **Kubernetes does not destroy persistent volumes.**
+
+  - `emptyDir 같은 ephemeral volumes` 은 `Pod 가 사라지면 같이 사라지고` (**컨텐츠가 유지되지 않는 것**) Pod 가 새로 만들어지면 새롭게 만들어지는 저장소
+
+  - `persistent volumes` 은 `외부에 따로 존재하는 저장소` 이고, Pod 가 외부에 mount 되어서 사용하다가 Pod 가 사라져도 Volume 은 persistent 하게 유지된다.
+
+- Ephemeral volume 이나 persistent volumes 외에 **다른 스타일의 volumes** 들이 많이 있다.
+
+- 실제 하드웨어적인 storage 가 있을 때, 그 부분을 persistent volumes 로 만들어서 mount 하여 사용할 수 있다.
+
+- public 클라우드 사업자들에게 있는 volumes 를 나의 클라우드에 붙혀서 사용도 가능하다.
+
+  - **awsElasticBlockStore** : AWS 의 block storage 를 사용하는 것
+
+  - **azureDisk** : MS AZURE 의 public 클라우드에 있는 storage
+
+  - **azureFile** : MS AZURE 의 file 형태의 storage
+
+  - **cephfs** : storage 를 mount 하기 위해 다른 관리 기술들을 붙혀서 만드는데, 이러한 관리 체계의 오픈 소스 프로젝트
+
+  - **cinder** : 오픈스택의 storage 에 관련된 cinder 프로젝트 를 volume 으로 사용할 때
+
+  - **gcePersistentDisk** : 구글의 persistent disk
+
+- `hostPath` : **local 한 storage (서버의 storage)**
+
+- storage 를 Pod 에서 돌아가는 application 의 데이터를 저장하고 읽는 용도로 사용하기도 하지만...
+
+  - `configMap` : application 의 configuration 에 관련된 정보 를 따로 관리하기 위한 방법에 대해 정리됨.
+
+    - storage 의 특성상 쿠버네티스 시스템에 돌아가는 어떤 application 에 세팅할 정보가 필요할 때
+
+    - (ex) 응용 프로그램에 돌아가는 nginx 를 설치하고 미리 세팅할 값들이 있을 때
+
+  - `secret` : 암호 코드 같은 key 값을 따로 저장할 때, 체계에 대한 개념에 대해 정리됨.
+
+    - ID / password 같은 정보 를 관리
+
+    - (ex) 웹 서버에 로그인 하기 위한 아이디 / 패스워드 정보
+
+- `downwardAPI` : 클라우드 인프라의 정보를 알고싶을 때, API server 를 통해 명령을 내리고 정보를 받아오고 하는데
+
+  - 거꾸로 명령을 내려 부르는 것
+
+  - Pod 의 이름, Pod 의 IP, Pod 가 실행되는 노드의 이름 등 실제로 파드가 생성 및 실행이 되기전에는 알 수 없는 속성들도 존재
+
+  - 이런 속성들을 컨테이너에서 실행 중인 애플리케이션에서 알아내기 위해 사용됨.
+
+  - Downward API 는 단순히 환경변수, 또는 파일 (downwardAPI 볼륨을 통해) 로 위와 같은 속성들을 컨테이너에서 손쉽게 사용할 수 있도록 하는 기능
 
 ---
 
 ## emptyDir
 
-- **`emptyDir` 은 Pod 의 컨테이너 사이에서 같은 `임시 스토리지`를 공유할 때 사용하는 저장소**
+- Pod 가 생성될 때, emptyDir 이 생성될 수 있다.
+
+- `emptyDir` : 쿠버네티스가 돌고 있는 환경에서 Pod 가 생성될 때 기본적인 메모리를 이용하여 임시적으로 만들어 놓은 storage
 
 ```
-// emptyDir.yaml
+// emptyDir configuration example
 apiVersion: v1
 kind: Pod
 metadata:
-    name: test-pod
-sepc:
-    containers:
-        - name: container1
-          image: kubetm/init
-          volumeMounts:
-            - name: test-dir
-              mountPath: /test1
-        - name: container2
-          image: kubetm/init
-          volumeMounts:
-            - name: test-dir
-              mountPath: /test2
-        volumes:
-            - name: test-dir
-              emptyDir: {}
+  name: test-pd
+spec:
+  containers:
+  - image: registry.k8s.io/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+  volumes:
+  - name: cache-volume
+    emptyDir:
+      sizeLimit: 500Mi
 ```
 
-- 컨테이너 이름 : container1
+- container 가 돌아가는 Pod 를 만드는데, containers 의 name 과 image 같은 정보를 적어준다.
 
-  - container1 은 volumeMounts 의 name 으로 보면 test-dir 이라는 volume 을 갖고 있다.
+  - `추가적으로 storage 가 필요할 때, Volume 에 관한 정보를 적어줘야한다.`
 
-  - test-dir 이라는 volume 을 컨테이너 내의 test1 이라는 곳에 mount 시켰다.
+    - 컨테이너가 만들어지고 `volumes:` 에 해당하는 정보를 가진 Volume 이 붙어야한다 라고 하는 것
 
-- 컨테이너 이름 : container2
+    - `emptyDir` 라고 하는 것은 쿠버네티스가 돌고 있는 환경에서 메모리를 이용하여 임시적으로 만들어 놓은 storage 이다.
 
-  - container2 은 volumeMounts 의 name 으로 보면 test-dir 이라는 volume 을 갖고 있다.
+  - Volume 에 대한 정보를 volumes 에 적으면 항상 **containers 의 volumeMounts 의 mountPath** 를 적어야한다.
 
-  - test-dir 이라는 volume 을 컨테이너 내의 test2 이라는 곳에 mount 시켰다.
+    - `만든 Volume 을 만들어진 container 의 어떤 위치에 생성 (mount) 할 것인지 적는 것`
 
-<img width="438" alt="스크린샷 2023-05-01 오전 1 17 34" src="https://user-images.githubusercontent.com/87372606/235364092-ff9f1394-c1de-4721-8b2a-eafe85b23deb.png">
+    - 이 때, mount 하려는 Volume 의 이름과 volumes: 에 대한 정보로 만든 Volume 의 이름이 같아야한다.
 
-```
-// container1 에 접근
-kubectl exec -it test-pod container1 -- bash
+---
 
-// ls 명령어 실행 후 test1 directory 에 접근 (mount 된 것)
-ls
-cd test1
+### emptyDir 의 특성
 
-// 아무 파일이나 생성
-touch hello.txt
+- An emptyDir volume is `first created when a Pod is assigned to a node`, and `exists as long as that Pod is running` on that node
 
-// 탈출 후 container2 에 접근
-exit
-kubectl exec -it test-pod container2 -- bash
+  - Pod 가 생겨날 때, **쿠버네티스가 돌고있는 환경의 메모리를 이용해서 emptyDir 성격의 Volume 이 붙지만** 이는 `임시적이라 Pod 가 죽으면 같이 사라진다.`
 
-// test2 directory 에 접근해서 ls 명령어 확인 (mount 된 것)
-cd test2
-ls
-```
+- `RAM 형태`의 디렉토리이다. (RAM-backed filesystem)
 
-- apply 후 컨테이너에 접근해서 ls 명령어로 디렉토리를 확인해본다.
-
-- 같은 Pod 내 두 컨테이너가 임시 emptyDir 로 인해 파일을 공유하는 것을 확인할 수 있다.
-
-- delete 로 생성한 Pod 를 삭제하게 되면 Pod 가 삭제됨가 동시에 임시였던 emptyDir 도 사라지게된다.
+- `같은 Pod 안에 두 컨테이너`가 있고, 둘 다 emptyDir 을 사용할 때, `공유`가 될 수 있다.
 
 ---
 
 ## hostPath
 
-- **`hostPath` 는 워커노드에 붙는 저장소**이다. (`Pod 의 생명주기를 따라가지 않는다.`)
+- emptyDir 과 성격이 비슷하지만 사라지는 면에서 다르다.
 
-  - 그러나 노드가 죽을 경우 문제가 생긴다.
+- `hostPath` : A hostPath volume mounts a file or directory `from the host node's filesystem into your Pod.`
+
+- RAM 을 가지고 쓰는 것이 아닌 local 한 하드 디스크에 쓰는 것이므로 `Pod 가 사라져도 데이터가 남아있다.`
 
 ```
-// hostPath.yaml
+// hostPath configuration example
 apiVersion: v1
 kind: Pod
 metadata:
-    name: test-pod
+  name: test-pd
 spec:
-    nodeSelector:
-        kubernetes.io/hostname: grad3-worker-1
-    containers:
-        - name: container
-          image: kubetm/init
-          volumeMounts:
-            - name: test-volume
-              mountPath: /test1
-    volumes:
-        - name: test-volume
-          hostPath:
-            path: /test-volume
-            type: DirectoryOrCreate
+  containers:
+  - image: registry.k8s.io/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-pd
+      name: test-volume
+  volumes:
+  - name: test-volume
+    hostPath:
+      # directory location on host
+      path: /data
+      # this field is optional
+      type: Directory
 ```
 
-- test-pod 라는 이름의 Pod 를 생성한다.
+- Pod 의 containers 를 정의할 때, `volumeMounts` 로 **어떤 Volume 이 어디에 mount 될지** 적는다.
 
-  - `nodeSelector` 는 Pod 를 kubernetes.io/hostname 라는 label 에 grad3-worker-1 라는 곳에 생성하겠다고 설정한다.
+- `volumes:` 로 Volume 에 대한 정보를 정의한다.
 
-  - 똑같이 container 를 생성 후
+  - name 은 volumeMounts 에 적은 이름과 같은 Volume 이름 이어야 한다.
 
-    - test-volume 이라는 이름의 **volume 을 /test1 에 mount**
+  - `hostPath` 를 통해 path 를 정해준다.
 
-  - **test-volume 이라는 이름의 volume 을 생성** 후
+    - **노드에 붙은 local 한 하드 디스크 (메모리) 의 어떤 디렉토리에 있는 부분을 Volume 으로 사용할지 적는 것.**
 
-    - path 는 /test-volume
+    - host 에 있는 어떤 부분 중 어떤 path 에 있는 애를 쓸지 적는 것.
 
-    - `type` 을 설정 (DirectoryOrCreate = test-volume 이라는 디렉토리가 없다면 생성한다.)
+    - RAM 을 가지고 쓰는 것이 아닌 하드 디스크에 쓰는 것이므로 `Pod 가 사라져도 데이터가 남아있다.`
 
-<img width="384" alt="스크린샷 2023-05-01 오전 1 30 49" src="https://user-images.githubusercontent.com/87372606/235364687-5760d94f-7f34-49f3-abf0-09b4d24ccc1a.png">
+    - **새로운 Pod 가 생겨날 때, hostPath 의 위치에 붙일 수 있고 못 붙일 수도 있다.**
 
-- **grad3-worker-1 에 volume 이 생성되고 container1 의 /test1 에 mount 된다.**
+      - 서버가 여러개면 Pod 는 어디에 생성될지 모르기 때문. (어느 워커 노드에 생성될지 모르는 것)
 
-```
-// node 의 label 을 확인
-kubectl get node --show-labels
-```
-
-<img width="674" alt="스크린샷 2023-05-01 오전 1 32 54" src="https://user-images.githubusercontent.com/87372606/235364778-59c54e65-e7d2-4c51-a920-6da06724d1a5.png">
-
-```
-// Pod 에 접근해서 test1 이라는 디렉토리 가 생성되었는지 확인하고, 파일을 생성한다.
-kubectl exec -it test-pod -- bash
-ls
-cd test1
-touch hi.txt
-```
-
-- grad3-worker-1 에 /test-volume 이 생성되어있는 상태에서 컨테이너에 접근해서 /test1 에 hi.txt 를 만든 상황이다.
-
-  - grad3-worker-1 로 넘어가서 /test-volume 에도 정상적으로 hi.txt 가 생성되었는지 확인해본다.
-
-```
-ssh root@grad3-worker-1
-// 패스워드 입력
-```
-
-<img width="576" alt="스크린샷 2023-05-01 오전 1 38 39" src="https://user-images.githubusercontent.com/87372606/235365059-c47ddb5e-c1bc-4ddf-baf4-18080f35b8f3.png">
-
-```
-// hostPath2.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-    name: test-pod2
-spec:
-    nodeSelector:
-        kubernetes.io/hostname: grad3-worker-2
-    containers:
-        - name: container2
-          image: kubetm/init
-          volumeMounts:
-            - name: test-volume
-              mountPath: /test2
-    volumes:
-        - name: test-volume
-          hostPath:
-            path: /test-volume
-            type: DirectoryOrCreate
-```
-
-- grad3-worker-2 로 지정한 Pod 를 apply 한다.
-
-  - 이 Pod (test-pod2) 로 접근했을 때, mount 된 곳에 들어갔을 때, test-pod 에서 만든 파일이 존재하는지 확인해본다.
-
-  - 없는 것을 확인할 수 있다.
-
-```
-// test-pod2 에 접근
-kubectl exec -it test-pod2 -- bash
-
-// mount 된 디렉토리에 접근 후 파일 확인
-cd test2
-ls
-```
-
-<img width="237" alt="스크린샷 2023-05-01 오전 1 43 04" src="https://user-images.githubusercontent.com/87372606/235365278-bcab4a04-6d1d-4813-ae33-5e5ab4e9a902.png">
-
-- worker-1 에 Volume 은 hostPath 로 생성됐는데, worker-2 에서 생성된 Pod 에서는 worker-1 에서만 효력이 있는 Volume 에 연결될 수 없다.
+- `persistentVolume` 은 **외부에 있어서 내가 찾아서 사용할 수 있지만** `hostPath` 는 **`local 에 존재하는 특정 공간을 Volume 으로 사용하는 것`**이기 때문
 
 ---
 
-## 시나리오
+`References`
 
-<img width="558" alt="스크린샷 2023-05-01 오전 2 05 27" src="https://user-images.githubusercontent.com/87372606/235366397-2cdbecba-3c5e-45a3-97f0-6f1516166164.png">
-
-- local pv 로 실습해볼 것. (Persistance Volume 을 apply)
-
-- pvc 와 storageClass 까지 apply 해서 Pod 가 사라져도 파일이 남아있는지 확인한다.
-
----
-
-### PersistentVolume
-
-<img width="558" alt="스크린샷 2023-05-01 오전 2 07 55" src="https://user-images.githubusercontent.com/87372606/235366491-97406e6c-844d-4942-99e2-59cad654f2c0.png">
-
-```
-// pv.yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-    name: test-pv
-spec:
-    capacity:
-        storage: 5Gi
-    accessModes:
-        - ReadWriteOnce
-    persistentVolumeReclaimPolicy: Retain
-    storageClassName: local-storage
-    local:
-        path: /tmp
-    nodeAffinity:
-        required:
-            nodeSelectorTerms:
-                - matchExpressions:
-                    - key: kubernetes.io/hostname
-                      operator: In
-                      values:
-                        - grad3-worker-1
-```
-
-- test-pv 라는 이름의 `PersistentVolume` 을 생성
-
-  - storage 의 `용량을 설정`한다. (spec: capacity: storage: 5Gi)
-
-  - Pod 하나만 Read/Write 할 수 있다.(`ReadWriteOnce`)
-
-  - `persistentVolumeReclaimPolicy` : pvc 와 pv 가 bound 될 때, pvc 를 지워도 pv 안에 있는 파일의 내용을 유지시킬지 말지에 대해 정하는 필드
-
-    - retain : 유지
-
-  - `storageClassName` : 나중에 정의할 storageClass 이름을 정의
-
-  - local 의 root/tmp 에 pv 를 `mount` 시킨다.
-
-  - `nodeAffinity` : nodeSelector 와 비슷한 역할을 하는데 더 강력함
-
-    - label 역할을 하는 key: kubernetes.io/hostname 를 적고
-
-    - values: - grad3-worker-1 를 적음으로써
-
-    - grad3-worker-1 에 pv 를 생성하겠다는 얘기가 된다.
-
-<img width="558" alt="스크린샷 2023-05-01 오전 2 15 36" src="https://user-images.githubusercontent.com/87372606/235366835-1f59919d-bb61-462e-a84a-e5115d16d03a.png">
-
----
-
-### StorageClass
-
-<img width="532" alt="스크린샷 2023-05-01 오전 2 17 26" src="https://user-images.githubusercontent.com/87372606/235366936-69e27d0a-915c-4c2f-babd-11b1938b2261.png">
-
-- `StorageClass` 는 사람이 수동으로 provisioning 하는 것이 아니라 자동으로 Volume 을 생성하고 할당하는 (provisioning) 해주는 오브젝트
-
-```
-// storageclass.yaml (local pv 상황)
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-    name: local-storage
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
-```
-
-- pv 에서 봤던 **storageClassName 으로 metadata: name: 을 설정**
-
-- `volumeBindingMode` : **pvc 를 사용하는 Pod 가 진짜 생성되기 전까지는 pv 에 binding 이랑 provisioning 을 기다린다.** (동적 provisioning 이 안돼서 추가한 것)
-
-<img width="661" alt="스크린샷 2023-05-01 오전 2 20 54" src="https://user-images.githubusercontent.com/87372606/235367055-0a51ca71-086b-4f62-82ce-3dddd710d5ec.png">
-
----
-
-### PersistentVolumeClaim
-
-<img width="509" alt="스크린샷 2023-05-01 오전 2 22 36" src="https://user-images.githubusercontent.com/87372606/235367128-05025c90-aca1-418d-bca1-13d4e70c9a74.png">
-
-```
-// pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-    name: test-pvc
-spec:
-    storageClassName: local-storage
-    volumeName: test-pv
-    accessModes:
-        - ReadWriteOnce
-    resources:
-        requests:
-            storage: 3Gi
-```
-
-- test-pvc 라는 이름의 PersistentVolumeClaim 을 생성
-
-  - `storageClassName` 을 local-storage 로 설정
-
-  - `volumeName` : pv 의 name
-
-  - 요구사항을 적어서 (Claim) 보낸다.
-
-  - STATUS : Bound 면 잘 생성된 것
-
-<img width="490" alt="스크린샷 2023-05-01 오전 2 25 22" src="https://user-images.githubusercontent.com/87372606/235367231-c4526f2c-e8f5-4559-8b73-e90856bdac22.png">
-
----
-
-### Pod 와 연결
-
-- **PersistentVolume, StorageClass, PersistentVolumeClaim 을 생성한 후** `Pod 에 Claim 에 대한 정보를 넣어야한다.`
-
-```
-// test.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-    name: test-pod3
-spec:
-    containers:
-        - name: container3
-          image: kubetm/init
-          volumeMounts:
-            - name: test-pvc
-              mountPath: /test3
-    volumes:
-        - name: test-pvc
-          persistentVolumeClaim:
-            claimName: test-pvc
-```
-
-- test-pod3 라는 이름의 Pod 생성
-
-  - test-pvc 라는 이름의 Volume 생성
-
-    - `persistentVolumeClaim` : 의 claimName 을 이전에 만든 pvc 의 이름을 적는다. (test-pvc)
-
-    - volumes 의 name 과 claimName 은 달라도 된다.
-
-  - **volumeMounts 할 때, 이름은 만든 Volume 의 이름이 되어야한다. (volumes: - name: test-pvc)**
-
-    - mount 를 container3 의 test3 에 한다.
-
-- **pv.yaml 에서 nodeAffinity 를 kubernetes.io/hostname: grad3-worker-1** 로 설정했다.
-
-  - pv 는 `grad3-worker-1 에 /tmp 에 mount` 되어 있다.
-
-  - `이 경로가 container3 에 mount 된 경로` (/test3) 이다.
-
-```
-// grad3-worker-1 에서 /tmp 에 mount 된 것 확인
-ssh root@grad3-worker-1
-// 패스워드 입력
-ls /tmp
-
-// test-pod3 에 접근 후 test3 에 접근하여 내용 확인
-kubectl exec -it test-pod3 -- bash
-cd test3
-ls
-```
-
-<img width="445" alt="스크린샷 2023-05-01 오전 2 36 33" src="https://user-images.githubusercontent.com/87372606/235367732-487a58a3-ff7f-44a1-b380-ce300f9b8b43.png">
-
-<img width="616" alt="스크린샷 2023-05-01 오전 2 36 15" src="https://user-images.githubusercontent.com/87372606/235367717-cafe807d-fb20-4e85-9ff4-7baae3af7346.png">
-
-- `worker-1 의 /tmp 의 내용과 test-pod3 의 /test3 의 내용이 같은 것을 확인`할 수 있다.
-
-<img width="518" alt="스크린샷 2023-05-01 오전 2 40 45" src="https://user-images.githubusercontent.com/87372606/235367958-6e121ad7-77c6-4af2-b84c-a0b6d55e2653.png">
-
-<img width="518" alt="스크린샷 2023-05-01 오전 2 40 57" src="https://user-images.githubusercontent.com/87372606/235367949-b75b2f45-edc9-401b-b1d7-c192037c8e2b.png">
-
-1. `test-pod3 의 /test3 에서 파일을 생성하면 local pv 가 mount 된 /tmp 에서도 똑같이 생성된 것을 확인할 수 있다.` (**같은 storage 에 접근하고 있는 것**)
-
-2. **Pod 를 delete 해도 생성한 파일이 남아있는지 확인**해본다. --> 잘 남아있음을 확인할 수 있다.
-
-3. **또 다시 Pod 를 만들었을 때, 이전에 생성한 파일이 잘 연결될지 확인**해본다. --> 재생성해도 공유가 잘 되는 것을 확인할 수 있다.
-
-```
-kubectl apply -f test.yaml
-kubectl exec -it test-pod3 -- ls/test3
-```
-
-4. **/tmp 에서 파일을 삭제했을 때, test-pod3 의 test3 에서도 파일이 삭제되는 것을 확인**할 수 있다.
-
-```
-// grad3-worker-1 에서 명령어 실행
-rm /tmp/파일명
-// test-pod3 에서 명령어 실행
-kubectl exec -it test-pod3 -- ls/test3
-```
+- [Kubernetes.io 의 Storage/Volume 문서](https://kubernetes.io/docs/concepts/storage/volumes/)
