@@ -38,9 +38,9 @@
 
 - **Week 9 - Kubernetes 의 Storage**
 
-  - K8S Volume 개요
+  - [K8S Volume 개요 및 emptyDir 과 hostPath](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_9/article.md)
 
-  - [Emptydir, Hostpath, PV/PVC/StorageClass 실습](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_9/article2.md)
+  - [emptyDir, hostPath, PV/PVC/StorageClass 실습](https://github.com/jjaehwi/2023_Cloud/blob/main/Week_9/article2.md)
 
 ---
 
