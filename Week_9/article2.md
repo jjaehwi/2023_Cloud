@@ -1,6 +1,6 @@
-# Emptydir, Hostpath, PV/PVC/StorageClass
+# emptyDir, hostPath, PV/PVC/StorageClass
 
-- [Emptydir](#emptydir)
+- [emptyDir](#emptydir)
 
 - [hostPath](#hostpath)
 
@@ -16,9 +16,9 @@
 
 ---
 
-## Emptydir
+## emptyDir
 
-- **`Emptydir` 은 Pod 의 컨테이너 사이에서 같은 `임시 스토리지`를 공유할 때 사용하는 저장소**
+- **`emptyDir` 은 Pod 의 컨테이너 사이에서 같은 `임시 스토리지`를 공유할 때 사용하는 저장소**
 
 ```
 // emptyDir.yaml
