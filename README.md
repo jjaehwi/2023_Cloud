@@ -44,6 +44,24 @@
 
   - [emptyDir, hostPath, PV/PVC/StorageClass 실습](https://github.com/jjaehwi/2023_Cloud/blob/main/Week09/article3.md)
 
+- **Week 10 - Kubernetes Secret and Configmap**
+
+  - [Kubernetes Design Principles: Understand the why Part 3,4](https://github.com/jjaehwi/2023_Cloud/blob/main/Week10/article.md)
+
+  - [Configmap and Secret](https://github.com/jjaehwi/2023_Cloud/blob/main/Week10/article2.md)
+
+  - Secret 실습
+
+- **Week 11 - Kubernetes StatefulSet**
+
+  - [StatefulSet](https://github.com/jjaehwi/2023_Cloud/blob/main/Week11/article.md)
+
+- **Week 12 - Kubernetes API Server, **
+
+  - Role & Role binding
+
+  - Job
+
 ---
 
 ## References
