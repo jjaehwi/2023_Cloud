@@ -56,11 +56,11 @@
 
   - [StatefulSet](https://github.com/jjaehwi/2023_Cloud/blob/main/Week11/article.md)
 
-- **Week 12 - Kubernetes API Server, **
+- **Week 12 - Kubernetes API Server, Job**
 
-  - Role & Role binding
+  - [Role & Role binding](https://github.com/jjaehwi/2023_Cloud/blob/main/Week12/article.md)
 
-  - Job
+  - [Job](https://github.com/jjaehwi/2023_Cloud/blob/main/Week12/article2.md)
 
 ---
 
